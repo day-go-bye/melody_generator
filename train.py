@@ -1,29 +1,7 @@
 """
-This file contains the training pipeline for a Transformer model specialized in
-melody generation. It includes functions to calculate loss, perform training steps,
-and orchestrate the training process over multiple epochs. The script also
-demonstrates the use of the MelodyGenerator class to generate a melody after training.
-
-The training process uses a custom implementation of the Transformer model,
-defined in the 'transformer.py' module, and prepares data using the
-MelodyPreprocessor class from 'melodypreprocessor.py'.
-
-Global parameters such as the number of epochs, batch size, and path to the dataset
-are defined. The script supports dynamic padding of sequences and employs the
-Sparse Categorical Crossentropy loss function for model training.
-
-For simplicity's sake training does not deal with masking of padded values
-in the encoder and decoder. Also, look-ahead masking is not implemented.
-Both of these are left as an exercise for the student.
-
-Key Functions:
-- _calculate_loss_function: Computes the loss between actual and predicted sequences.
-- _train_step: Executes a single training step, including forward pass and backpropagation.
-- train: Runs the training loop over the entire dataset for a given number of epochs.
-- _right_pad_sequence_once: Utility function for padding sequences.
-
-The script concludes by instantiating the Transformer model, conducting the training,
-and generating a sample melody using the trained model.
+edited by day-go-bye from the Sound of AI course materials for transformer model
+trained on examples of 2 voice 1st species counterpoint to create a new counterpoint example
+exports a .mid file
 """
 
 import tensorflow as tf
@@ -32,6 +10,8 @@ from keras.optimizers import Adam
 from melodygenerator import MelodyGenerator
 from melodypreprocessor import MelodyPreprocessor
 from transformer import Transformer
+from midiutil import MIDIFile
+
 
 # Global parameters
 EPOCHS = 10
@@ -153,6 +133,50 @@ def _right_pad_sequence_once(sequence):
     """
     return tf.pad(sequence, [[0, 0], [0, 1]], "CONSTANT")
 
+def create_midi_from_pairs(pairs, output_file='output.mid'):
+    # Create a MIDI file
+    midi = MIDIFile(1)  # One track
+    track = 0
+    time = 0
+
+    # Set track name and tempo
+    midi.addTrackName(track, time, "Generated MIDI")
+    midi.addTempo(track, time, 120)  # Adjust tempo as needed
+
+    # Map integers to MIDI note numbers
+    note_mapping = {
+        -7: 53,
+        -5: 55,
+        -3: 57,
+        -1: 59,
+        0: 60,  # C
+        2: 62,  # D
+        4: 64,  # E
+        5: 65,  # F
+        7: 67,  # G
+        9: 69,  # A
+        11: 71,  # B
+        12: 72,   # High C
+        14: 74,
+        16: 76,
+        15: 77,
+        17: 79
+        # Add more mappings if needed
+    }
+
+    for pair in pairs:
+        note1, note2 = pair
+
+        
+        midi.addNote(track, 0, note_mapping.get(note1, 60), time, 1, 100)
+        midi.addNote(track, 0, note_mapping.get(note2, 60), time, 1, 100)
+        time += 1
+
+    # Write the MIDI file
+    with open(output_file, "wb") as midi_file:
+        midi.writeFile(midi_file)
+
+
 
 if __name__ == "__main__":
     melody_preprocessor = MelodyPreprocessor(DATA_PATH, batch_size=BATCH_SIZE)
@@ -177,6 +201,16 @@ if __name__ == "__main__":
     melody_generator = MelodyGenerator(
         transformer_model, melody_preprocessor.tokenizer
     )
-    start_sequence = [[1, 3, 5]]
+    start_sequence = ["(0 7)", "(2 5)", "(0 9)"] # change start sequence if desired
     new_melody = melody_generator.generate(start_sequence)
     print(f"Generated melody: {new_melody}")
+
+    numbers_string = new_melody.replace('(', '').replace(')', '')
+    numbers_list = list(map(int, numbers_string.split()))
+
+    # Group the numbers into pairs
+    pairs = [(numbers_list[i], numbers_list[i + 1]) for i in range(0, len(numbers_list), 2)]
+
+    create_midi_from_pairs(pairs, output_file='output.mid')
+
+
