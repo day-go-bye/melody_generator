@@ -1,6 +1,6 @@
 """
 edited by day-go-bye from the Sound of AI course materials for transformer model
-trained on examples of 2 voice 1st species counterpoint to create a new counterpoint example
+trains on examples of 2 voice 1st species counterpoint to create a new counterpoint example
 exports a .mid file
 """
 
