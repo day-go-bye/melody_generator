@@ -36,6 +36,7 @@ import json
 import numpy as np
 import tensorflow as tf
 from keras.preprocessing.text import Tokenizer
+import re
 
 
 class MelodyPreprocessor:
@@ -81,17 +82,15 @@ class MelodyPreprocessor:
                 pairs suitable for training a sequence-to-sequence model.
         """
         dataset = self._load_dataset()
-        # parsed_melodies = [self._parse_melody(melody) for melody in dataset]
-        # tokenized_melodies = self._tokenize_and_encode_melodies(
-        #     parsed_melodies
-        # )
-        self._set_max_melody_length(dataset)
-        # self._set_number_of_tokens()
-        combined_dataset = []
-        for sublist in dataset:
-            combined_dataset.extend(sublist)
-        self.number_of_tokens = len(set(combined_dataset))
-        input_sequences, target_sequences = self._create_sequence_pairs(dataset)
+        parsed_melodies = [self._parse_melody(melody) for melody in dataset]
+        tokenized_melodies = self._tokenize_and_encode_melodies(
+            parsed_melodies
+        )
+        self._set_max_melody_length(tokenized_melodies)
+        self._set_number_of_tokens()
+        input_sequences, target_sequences = self._create_sequence_pairs(
+            tokenized_melodies
+        )
         tf_training_dataset = self._convert_to_tf_dataset(
             input_sequences, target_sequences
         )
@@ -131,7 +130,6 @@ class MelodyPreprocessor:
         """
         self.tokenizer.fit_on_texts(melodies)
         tokenized_melodies = self.tokenizer.texts_to_sequences(melodies)
-        print(tokenized_melodies)
         return tokenized_melodies
 
     def _set_max_melody_length(self, melodies):
@@ -141,7 +139,6 @@ class MelodyPreprocessor:
         Parameters:
             melodies (list): A list of tokenized melodies.
         """
-        
         self.max_melody_length = max([len(melody) for melody in melodies])
 
     def _set_number_of_tokens(self):
@@ -149,7 +146,6 @@ class MelodyPreprocessor:
         Sets the number of tokens based on the tokenizer.
         """
         self.number_of_tokens = len(self.tokenizer.word_index)
-        print(self.tokenizer.word_index)
 
     def _create_sequence_pairs(self, melodies):
         """
@@ -170,7 +166,6 @@ class MelodyPreprocessor:
                 padded_target_seq = self._pad_sequence(target_seq)
                 input_sequences.append(padded_input_seq)
                 target_sequences.append(padded_target_seq)
-
         return np.array(input_sequences), np.array(target_sequences)
 
     def _pad_sequence(self, sequence):
